@@ -32,4 +32,14 @@ public:
     ~String() {
         delete[] str;
     }
+
+    void input() {
+        cout << "Введіть рядок: ";
+        cin.ignore();
+        cin.getline(str, size + 1);
+    }
+
+    void output() const {
+        cout << "Рядок: " << str << endl;
+    }
 };
