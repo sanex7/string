@@ -29,4 +29,7 @@ public:
         strcpy(str, other.str);
     }
 
+    ~String() {
+        delete[] str;
+    }
 };
