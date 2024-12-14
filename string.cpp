@@ -29,6 +29,11 @@ public:
         strcpy(str, other.str);
     }
 
+    String(String&& other) noexcept : str(other.str), size(other.size) {
+        other.str = nullptr;
+        other.size = 0;
+    }
+
     ~String() {
         delete[] str;
     }
@@ -49,6 +54,17 @@ public:
             size = other.size;
             str = new char[size + 1];
             strcpy(str, other.str);
+        }
+        return *this;
+    }
+
+    String& operator=(String&& other) noexcept {
+        if (this != &other) {
+            delete[] str;
+            str = other.str;
+            size = other.size;
+            other.str = nullptr;
+            other.size = 0;
         }
         return *this;
     }
