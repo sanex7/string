@@ -4,6 +4,18 @@
 #include <iostream>
 #include <cstring>
 #include <stdexcept>
+#include <exception>
+
+class StringException : public std::exception {
+private:
+    std::string message;
+
+public:
+    explicit StringException(const std::string& msg) : message(msg) {}
+    const char* what() const noexcept override {
+        return message.c_str();
+    }
+};
 
 template<typename CharT = char>
 class String {
@@ -11,26 +23,34 @@ private:
     CharT* str;
     size_t size;
 
-public:
-    // Конструктори
-    String() : size(80) {
-        str = new CharT[size + 1];
-        memset(str, '\0', size + 1);
+    void allocateMemory(size_t newSize) {
+        str = new (std::nothrow) CharT[newSize + 1];
+        if (!str) {
+            throw StringException("Memory allocation failed.");
+        }
+        memset(str, '\0', newSize + 1);
     }
 
-    String(size_t customSize) : size(customSize) {
-        str = new CharT[size + 1];
-        memset(str, '\0', size + 1);
+public:
+    String() : size(80) {
+        allocateMemory(size);
+    }
+
+    explicit String(size_t customSize) : size(customSize) {
+        allocateMemory(size);
     }
 
     String(const CharT* input) {
+        if (!input) {
+            throw StringException("Null pointer passed as input.");
+        }
         size = strlen(input);
-        str = new CharT[size + 1];
+        allocateMemory(size);
         strcpy(str, input);
     }
 
     String(const String& other) : size(other.size) {
-        str = new CharT[size + 1];
+        allocateMemory(size);
         strcpy(str, other.str);
     }
 
@@ -43,7 +63,6 @@ public:
         delete[] str;
     }
 
-    // Методи
     void input() {
         std::cout << "Enter a string: ";
         std::cin.ignore();
@@ -60,21 +79,25 @@ public:
 
     String substr(size_t pos, size_t len) const {
         if (pos >= size) {
-            throw std::out_of_range("Position out of range");
+            throw StringException("Position out of range.");
         }
         size_t newLen = (pos + len > size) ? size - pos : len;
-        CharT* newStr = new CharT[newLen + 1];
+        CharT* newStr = new (std::nothrow) CharT[newLen + 1];
+        if (!newStr) {
+            throw StringException("Memory allocation failed for substring.");
+        }
         strncpy(newStr, str + pos, newLen);
         newStr[newLen] = '\0';
-        return String(newStr);
+        String result(newStr);
+        delete[] newStr;
+        return result;
     }
 
-    // Оператори
     String& operator=(const String& other) {
         if (this != &other) {
             delete[] str;
             size = other.size;
-            str = new CharT[size + 1];
+            allocateMemory(size);
             strcpy(str, other.str);
         }
         return *this;
@@ -92,29 +115,43 @@ public:
     }
 
     String operator+(const String& other) const {
-        String result(size + other.size);
-        strcpy(result.str, str);
-        strcat(result.str, other.str);
+        size_t newSize = size + other.size;
+        CharT* newStr = new (std::nothrow) CharT[newSize + 1];
+        if (!newStr) {
+            throw StringException("Memory allocation failed for concatenation.");
+        }
+        strcpy(newStr, str);
+        strcat(newStr, other.str);
+        String result(newStr);
+        delete[] newStr;
         return result;
     }
 
     String& operator+=(const String& other) {
-        size += other.size;
-        CharT* newStr = new CharT[size + 1];
+        size_t newSize = size + other.size;
+        CharT* newStr = new (std::nothrow) CharT[newSize + 1];
+        if (!newStr) {
+            throw StringException("Memory allocation failed for concatenation.");
+        }
         strcpy(newStr, str);
         strcat(newStr, other.str);
         delete[] str;
         str = newStr;
+        size = newSize;
         return *this;
     }
 
     CharT& operator[](size_t index) {
-        if (index >= size) throw std::out_of_range("Index out of range");
+        if (index >= size) {
+            throw StringException("Index out of range.");
+        }
         return str[index];
     }
 
     const CharT& operator[](size_t index) const {
-        if (index >= size) throw std::out_of_range("Index out of range");
+        if (index >= size) {
+            throw StringException("Index out of range.");
+        }
         return str[index];
     }
 
